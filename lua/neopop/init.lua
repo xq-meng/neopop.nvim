@@ -1,19 +1,17 @@
 local M = {}
 
-local telescope = require('telescope.builtin')
-local gitsigns = require('gitsigns')
-
-local menu_items = {
-    {"Reference", "r", telescope.lsp_references},
-    {"Definition", "d", telescope.lsp_definitions},
-    {"Implementation", "i", telescope.lsp_implementations},
-    {"Declaration", "D", vim.lsp.buf.declaration},
-    {"--------------------", ""},
-    {"Preview Git Changes", "P", gitsigns.preview_hunk},
-    {"Reset Git Changes", "R", gitsigns.reset_hunk},
-}
+local default_items = {}
 
 function M.show_menu()
+    if vim.api.nvim_buf_get_name(0) == "" then
+        return
+    end
+
+    if (#M.menu_items < 1) then
+        vim.notify("No popup menu items!")
+        return
+    end
+
     local cursor_word = vim.fn.expand('<cword>')
     if not cursor_word or cursor_word == "" then
         vim.notify("No variable under the cursor!")
@@ -21,9 +19,7 @@ function M.show_menu()
     end
 
     local menu_content = {}
-    for _, item in ipairs(menu_items) do
-        -- table.insert(menu_content, item[1] .. " - " .. item[2])
-        -- table.insert(menu_content, item[1])
+    for _, item in ipairs(M.menu_items) do
         if item[2] and item[2] ~= '' then
             table.insert(menu_content, string.format("%-22s[%s]", item[1], item[2]))
         else
@@ -52,14 +48,14 @@ function M.show_menu()
         callback = function()
             local cursor = vim.api.nvim_win_get_cursor(win)
             vim.api.nvim_win_close(win, true)
-            if menu_items[cursor[1]][3] then
-                menu_items[cursor[1]][3]()
+            if M.menu_items[cursor[1]][3] then
+                M.menu_items[cursor[1]][3]()
             end
         end
     })
 
     -- shortcut.
-    for _, item in ipairs(menu_items) do
+    for _, item in ipairs(M.menu_items) do
         if item[2] and item[2] ~= '' and item[3] then
             vim.api.nvim_buf_set_keymap(buf, 'n', item[2], '', {
                 noremap = true,
@@ -89,10 +85,8 @@ function M.show_menu()
     })
 end
 
-function M.setup()
-
+function M.setup(menu_items)
+    M.menu_items = vim.tbl_deep_extend("force", default_items, menu_items or {})
 end
-
-M.setup()
 
 return M
